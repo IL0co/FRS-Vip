@@ -1,0 +1,38 @@
+"Phrases"
+{
+
+	"DISABLE_RANK"
+	{
+		"ru"		"Отключить"
+		"en"		"Disable"
+		"ua"		"Вдключити"
+	}
+
+	"Disabled Rank"
+	{
+		"ru"		"Вы отключили свой ранг"
+		"en"		"You have disabled your rank"
+		"ua"		"Ви відключили свій ранг"
+	}
+	
+	"YOU_SET_RANK"
+	{
+		"#format"	"{1:s}"
+		"ru"		"Вы установили себе ранк: {1}"
+		"en"		"You rank yourself: {1}"
+		"ua"		"Ви встановили собі ранк: {1}"
+	}
+	
+	"Category Display"
+	{
+		"ru"		"Выберите категорию:"
+		"en"		"Select a category:"
+		"ua"		"Оберіть категорію:"
+	}
+	"Item Display"
+	{
+		"ru"		"Выберите ранг:"
+		"en"		"Choose a rank:"
+		"ua"		"Виберіть ранг:"
+	}
+}

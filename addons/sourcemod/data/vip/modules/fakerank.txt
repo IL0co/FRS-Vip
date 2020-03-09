@@ -1,0 +1,22 @@
+"FakeRank"
+{
+	"DefEnabled"	"85"	// RU: Дефолтная табличка (начальная)						| EN: Default plate (initial)
+	"HideBlocked"	"0"		// RU: Прятать ли в меню недоступные игроку категории		| EN: Hide categories inaccessible to the player on the menu
+	"PreviewEnable" "1"		// RU: Включено ли превью в хинте							| EN: Is hint preview enabled
+	
+	"group1"	
+	{
+//	RU:	"id иконки"	"название в меню"
+// 	EN:	"id icons" 	"name in menu"
+
+		"1"		"тест1"		
+		"2"		"тест2"		
+		"3"		"тест3"		
+	}
+	"group1"	
+	{
+		"4"		"тест4"		
+		"5"		"тест5"		
+		"6"		"тест6"		
+	}
+}
