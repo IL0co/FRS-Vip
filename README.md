@@ -45,7 +45,7 @@
 {
 	"YouGroupName"
 	{
-     // "FakeRanks"         "enumeration of groups from the file "modules/fakerank.txt", divided through;"
+     // "FakeRanks"         "enumeration of groups from the file "modules/fakerank.txt", divided through ;"
         "FakeRanks"         "group1;group2"
 
         OR
