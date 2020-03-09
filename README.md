@@ -17,7 +17,7 @@
 ## Thumbs preview
 **This function is enabled only if preview_mode > 0**
 
-+ **If PreviewEnable == 1** You must upload the png file to any hosting in order to get the full url link to the image. After registering this link in the line **"preview"** in the desired item
++ **If PreviewEnable == 1**
 
 <img src="https://i.imgur.com/C8oRmuj.png" width="70%">  
 
