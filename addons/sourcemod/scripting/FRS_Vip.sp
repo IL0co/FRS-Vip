@@ -2,9 +2,10 @@
 #pragma newdecls required
 
 #include <sdktools>
-#include <clientprefs>
 #include <vip_core>
 #include <FakeRank_Sync>
+#include <clientprefs>
+#include <IFR>
 
 public Plugin myinfo = 
 {
@@ -18,7 +19,6 @@ public Plugin myinfo =
 #define VIP_FAKERANK	 "FakeRanks"
 #define IND "vip"
 
-static char URL[256];
 KeyValues kv;
 Handle hCookie;
 char iSelectCategory[MAXPLAYERS+1][32];
@@ -32,13 +32,6 @@ public void OnPluginEnd()
 
 public void OnPluginStart()
 {
-	GetConVarString(FindConVar("sv_downloadurl"), URL, sizeof(URL));
-
-	if(URL[strlen(URL)-1] != '/')
-		Format(URL, sizeof(URL), "%s/", URL);
-
-	Format(URL, sizeof(URL), "%smaterials/panorama/images/icons/skillgroups/skillgroup", URL);
-
 	hCookie = RegClientCookie("VIP_MyFakeRank", "VIP_MyFakeRank", CookieAccess_Public);
 
 	FRS_OnCoreLoaded();
@@ -119,9 +112,15 @@ public Action Timer_Delay(Handle timer, any client)
 	char buff[64];
 	GetClientCookie(client, hCookie, buff, sizeof(buff));
 	if(!buff[0])
-		kv.GetString("DefEnabled", buff, sizeof(buff));
+	{ 
+		VIP_GetClientFeatureString(client, VIP_FAKERANK, buff, sizeof(buff));
 
-	FRS_SetClientRankId(client, StringToInt(buff), IND);
+		if(buff[0])
+		{
+			kv.GetString("DefEnabled", buff, sizeof(buff));
+			FRS_SetClientRankId(client, StringToInt(buff), IND);
+		}
+	}
 }
 
 public bool OnSelectItem(int client, const char[] sFeatureName)
@@ -247,19 +246,19 @@ public int OnShowItemsMenu(Menu hMenu, MenuAction action, int client, int item)
 			{
 				char buff[32];
 				hMenu.GetItem(item, buff, sizeof(buff));
+				int id = StringToInt(buff);
 
 				if(kv.JumpToKey(iSelectCategory[client]))
 				{
 
 					SetClientCookie(client, hCookie, buff);
-					FRS_SetClientRankId(client, StringToInt(buff), IND);
+					FRS_SetClientRankId(client, id, IND);
 					
 					if(preview_enable)
-						PrintHintText(client, "<font> <img src='%s%s.png' /></font>", URL, buff);
+						IFR_ShowHintFakeRank(client, id);
 
 					kv.GetString(buff, buff, sizeof(buff));
 					VIP_PrintToChatClient(client, "%T", "YOU_SET_RANK", client, buff);
-					
 				}
 
 				kv.Rewind();
