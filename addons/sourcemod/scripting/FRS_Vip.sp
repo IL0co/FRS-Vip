@@ -181,7 +181,7 @@ public int OnMainMenuDisplay(Menu hMenu, MenuAction action, int client, int item
 	switch(action)
 	{
 		case MenuAction_End: hMenu.Close();
-		case MenuAction_Cancel: VIP_SendClientVIPMenu(client);
+		case MenuAction_Cancel: if(item == MenuCancel_ExitBack) VIP_SendClientVIPMenu(client);
 		case MenuAction_Select:
 		{
 			if(item == 0)
