@@ -35,7 +35,9 @@ public void OnPluginStart()
 	hCookie = RegClientCookie("VIP_MyFakeRank", "VIP_MyFakeRank", CookieAccess_Public);
 
 	FRS_OnCoreLoaded();
-	VIP_OnVIPLoaded();
+	
+	if(VIP_IsVIPLoaded())
+		VIP_OnVIPLoaded();
 	LoadCfg();
 	
 	LoadTranslations("vip_core.phrases");
