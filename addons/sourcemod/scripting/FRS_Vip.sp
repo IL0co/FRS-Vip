@@ -50,7 +50,7 @@ public void FRS_OnCoreLoaded()
 	FRS_RegisterKey(IND);
 
 	for(int i = 1; i <= MaxClients; i++)	if(IsClientAuthorized(i) && IsClientInGame(i))
-		OnClientCookiesCached(i);
+		VIP_OnClientLoaded(i, VIP_IsClientVIP(i));
 }
 
 public void VIP_OnVIPLoaded()
@@ -102,17 +102,11 @@ public void VIP_OnVIPClientRemoved(int client, const char[] szReason, int iAdmin
 	SelectDisable(client);
 }
 
-public void OnClientCookiesCached(int client)
+public void VIP_OnClientLoaded(int client, bool isVip)
 {
-	CreateTimer(5.0, Timer_Delay, GetClientUserId(client));
-}
-
-public Action Timer_Delay(Handle timer, any client)
-{
-	client = GetClientOfUserId(client);
-
 	char buff[64];
 	GetClientCookie(client, hCookie, buff, sizeof(buff));
+
 	if(!buff[0])
 	{ 
 		VIP_GetClientFeatureString(client, VIP_FAKERANK, buff, sizeof(buff));
