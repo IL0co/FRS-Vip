@@ -56,11 +56,12 @@ public void OnPluginStart()
 	isIFRReady = LibraryExists("Intermediary_FakeRank");
 	hCookie = new Cookie("VIP_MyFakeRank", "VIP_MyFakeRank", CookieAccess_Public);
 
+	LoadCfg();
+	
 	FRS_OnCoreLoaded();
 	
 	if(VIP_IsVIPLoaded())
 		VIP_OnVIPLoaded();
-	LoadCfg();
 	
 	LoadTranslations("vip_core.phrases");
 	LoadTranslations("vip_modules.phrases");
