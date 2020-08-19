@@ -1,18 +1,20 @@
-#pragma semicolon 1
-#pragma newdecls required
-
 #include <sdktools>
 #include <vip_core>
 #include <FakeRank_Sync>
 #include <clientprefs>
-#include <IFR>
+#include <sourcemod>
+#undef REQUIRE_PLUGIN
+#tryinclude <IFR>
+
+#pragma semicolon 1
+#pragma newdecls required
 
 public Plugin myinfo = 
 {
-	name		= "[FRS][VIP] Vip",
-	version		= "1.2",
+	name		= "[FRS][VIP] FakeRanks",
+	version		= "1.2.1",
 	description	= "Fake Ranks for vip",
-	author		= "ღ λŌK0ЌЭŦ ღ ™",
+	author		= "iLoco",
 	url			= "https://github.com/IL0co"
 }
 
@@ -20,9 +22,28 @@ public Plugin myinfo =
 #define IND "vip"
 
 KeyValues kv;
-Handle hCookie;
+Cookie hCookie;
 char iSelectCategory[MAXPLAYERS+1][32];
-bool HideBlocked, preview_enable;
+bool HideBlocked, preview_enable, isIFRReady;
+
+public APLRes AskPluginLoad2(Handle plugin, bool late, char[] error, int max)
+{
+	MarkNativeAsOptional("IFR_ShowHintFakeRank");
+
+	return APLRes_Success;
+}
+
+public void OnLibraryAdded(const char[] name)
+{
+	if(strcmp(name, "Intermediary_FakeRank", false) == 0)
+		isIFRReady = true;
+}
+
+public void OnLibraryRemoved(const char[] name)
+{
+	if(strcmp(name, "Intermediary_FakeRank", false) == 0)
+		isIFRReady = false;
+}
 
 public void OnPluginEnd()
 {
@@ -32,7 +53,8 @@ public void OnPluginEnd()
 
 public void OnPluginStart()
 {
-	hCookie = RegClientCookie("VIP_MyFakeRank", "VIP_MyFakeRank", CookieAccess_Public);
+	isIFRReady = LibraryExists("Intermediary_FakeRank");
+	hCookie = new Cookie("VIP_MyFakeRank", "VIP_MyFakeRank", CookieAccess_Public);
 
 	FRS_OnCoreLoaded();
 	
@@ -49,8 +71,8 @@ public void FRS_OnCoreLoaded()
 {
 	FRS_RegisterKey(IND);
 
-	for(int i = 1; i <= MaxClients; i++)	if(IsClientAuthorized(i) && IsClientInGame(i))
-		VIP_OnClientLoaded(i, VIP_IsClientVIP(i));
+	for(int i = 1; i <= MaxClients; i++)	if(IsClientAuthorized(i) && IsClientInGame(i) && !IsFakeClient(i) && VIP_IsClientVIP(i))
+		VIP_OnVIPClientLoaded(i);
 }
 
 public void VIP_OnVIPLoaded()
@@ -88,49 +110,35 @@ public void OnMapStart()
 	kv.Rewind();
 }
 
-public void VIP_OnVIPClientAdded(int client, int iAdmin)
+public void VIP_OnVIPClientLoaded(int client)
 {
-	char buff[10];
-	kv.GetString("DefEnabled", buff, sizeof(buff));
-	SetClientCookie(client, hCookie, buff);
-	FRS_SetClientRankId(client, StringToInt(buff), IND);
-
+	if(CheckClient(client))
+		FRS_SetClientRankId(client, GetClientId(client), IND);
 }
 
 public void VIP_OnVIPClientRemoved(int client, const char[] szReason, int iAdmin)
 {
-	SelectDisable(client);
+	FRS_SetClientRankId(client, 0, IND);
 }
 
-public void VIP_OnClientLoaded(int client, bool isVip)
+public void VIP_OnVIPClientAdded(int client, int admin)
 {
-	char buff[64];
-	GetClientCookie(client, hCookie, buff, sizeof(buff));
-
-	if(!buff[0])
-	{ 
-		VIP_GetClientFeatureString(client, VIP_FAKERANK, buff, sizeof(buff));
-
-		if(buff[0])
-		{
-			kv.GetString("DefEnabled", buff, sizeof(buff));
-			FRS_SetClientRankId(client, StringToInt(buff), IND);
-		}
-	}
+	if(CheckClient(client))
+		FRS_SetClientRankId(client, GetClientId(client), IND);
 }
 
 public bool OnSelectItem(int client, const char[] sFeatureName)
 {
-	ShowMainMenu(client);
+	Menu_Category(client).Display(client, 0);
 	return false;
 }
 
-public void ShowMainMenu(int client)
+public Menu Menu_Category(int client)
 {
 	char buff[32], feature[128], exp_buff[16][32];
 	bool allow, good = true;
 	int loop;
-	Menu hMenu = new Menu(OnMainMenuDisplay);
+	Menu menu = new Menu(MenuHendler_Category);
 
 	VIP_GetClientFeatureString(client, VIP_FAKERANK, feature, sizeof(feature));
 	if(strcmp(feature, "all", false) == 0)
@@ -138,10 +146,10 @@ public void ShowMainMenu(int client)
 	else loop = ExplodeString(feature, ";", exp_buff, sizeof(exp_buff), sizeof(exp_buff[]));
 	
 	Format(buff, sizeof(buff), "%T", "Category Display", client);
-	hMenu.SetTitle(buff);
+	menu.SetTitle(buff);
 
 	Format(buff, sizeof(buff), "%T\n ", "DISABLE_RANK", client);
-	hMenu.AddItem("", buff);
+	menu.AddItem("", buff);
 
 	if(kv.GotoFirstSubKey())
 	{
@@ -160,54 +168,56 @@ public void ShowMainMenu(int client)
 			}
 
 			if(good)
-				hMenu.AddItem(buff, buff, ITEMDRAW_DEFAULT);
+				menu.AddItem(buff, buff, ITEMDRAW_DEFAULT);
 			else if(HideBlocked)
-				hMenu.AddItem(buff, buff, ITEMDRAW_DISABLED);
+				menu.AddItem(buff, buff, ITEMDRAW_DISABLED);
 		}
 		while(kv.GotoNextKey());
 	} 
 	kv.Rewind();
 
-	hMenu.ExitBackButton = true;
-	hMenu.Display(client, MENU_TIME_FOREVER);
+	menu.ExitBackButton = true;
+
+	return menu;
 }
 
-public int OnMainMenuDisplay(Menu hMenu, MenuAction action, int client, int item)
+public int MenuHendler_Category(Menu menu, MenuAction action, int client, int item)
 {
 	switch(action)
 	{
-		case MenuAction_End: hMenu.Close();
+		case MenuAction_End: menu.Close();
 		case MenuAction_Cancel: if(item == MenuCancel_ExitBack) VIP_SendClientVIPMenu(client);
 		case MenuAction_Select:
 		{
 			if(item == 0)
 			{
-				SelectDisable(client);		
-				ShowMainMenu(client);		
+				SetClientCookie(client, hCookie, "0");
+				FRS_SetClientRankId(client, 0, IND);
+				Menu_Category(client).Display(client, 0);
 				VIP_PrintToChatClient(client, "%T", "Disabled Rank", client);	
 			}
 			else
 			{
 				char buff[32];
-				hMenu.GetItem(item, buff, sizeof(buff));
+				menu.GetItem(item, buff, sizeof(buff));
 				iSelectCategory[client] = buff;
-				ShowItemsMenu(client);
+				ShowItemsMenu(client).Display(client, 0);
 			}
 			
 		}
 	}
 }
 
-public void ShowItemsMenu(int client)
+public Menu ShowItemsMenu(int client)
 {
 	char buff[32], id[10];
-	Menu hMenu = new Menu(OnShowItemsMenu);
+	Menu menu = new Menu(MenuHendler_Items);
 	
 	Format(buff, sizeof(buff), "%T", "Item Display", client);
-	hMenu.SetTitle(buff);
+	menu.SetTitle(buff);
 
 	Format(buff, sizeof(buff), "%T\n ", "DISABLE_RANK", client);
-	hMenu.AddItem("", buff);
+	menu.AddItem("", buff);
 
 	if(kv.JumpToKey(iSelectCategory[client]) && kv.GotoFirstSubKey(false))
 	{
@@ -215,33 +225,33 @@ public void ShowItemsMenu(int client)
 		{
 			kv.GetSectionName(id, sizeof(id));
 			kv.GetString(NULL_STRING, buff, sizeof(buff));
-			hMenu.AddItem(id, buff);
+			menu.AddItem(id, buff);
 		}
 		while(kv.GotoNextKey(false));
 	} 
 	kv.Rewind();
 
-	hMenu.ExitBackButton = true;
-	hMenu.Display(client, MENU_TIME_FOREVER);
+	return menu;
 }
 
-public int OnShowItemsMenu(Menu hMenu, MenuAction action, int client, int item)
+public int MenuHendler_Items(Menu menu, MenuAction action, int client, int item)
 {
 	switch(action)
 	{
-		case MenuAction_End: hMenu.Close();
-		case MenuAction_Cancel: ShowMainMenu(client);
+		case MenuAction_End: menu.Close();
+		case MenuAction_Cancel: Menu_Category(client).Display(client, 0);
 		case MenuAction_Select:
 		{
 			if(item == 0)
 			{
-				SelectDisable(client);		
+				SetClientCookie(client, hCookie, "0");
+				FRS_SetClientRankId(client, 0, IND);	
 				VIP_PrintToChatClient(client, "%T", "Disabled Rank", client);		
 			}
 			else
 			{
 				char buff[32];
-				hMenu.GetItem(item, buff, sizeof(buff));
+				menu.GetItem(item, buff, sizeof(buff));
 				int id = StringToInt(buff);
 
 				if(kv.JumpToKey(iSelectCategory[client]))
@@ -250,7 +260,7 @@ public int OnShowItemsMenu(Menu hMenu, MenuAction action, int client, int item)
 					SetClientCookie(client, hCookie, buff);
 					FRS_SetClientRankId(client, id, IND);
 					
-					if(preview_enable)
+					if(isIFRReady && preview_enable)
 						IFR_ShowHintFakeRank(client, id);
 
 					kv.GetString(buff, buff, sizeof(buff));
@@ -265,12 +275,6 @@ public int OnShowItemsMenu(Menu hMenu, MenuAction action, int client, int item)
 	}
 }
 
-stock void SelectDisable(int client)
-{
-	SetClientCookie(client, hCookie, "0");
-	FRS_SetClientRankId(client, 0, IND);
-}
-
 stock void LoadCfg()
 {
 	kv = CreateKeyValues("FakeRank");
@@ -283,4 +287,80 @@ stock void LoadCfg()
 
 	HideBlocked = view_as<bool>(kv.GetNum("HideBlocked", 0));
 	preview_enable = view_as<bool>(kv.GetNum("PreviewEnable", 0));
+}
+
+stock bool CheckClient(int client)
+{
+	if(!VIP_IsClientVIP(client))
+		return false;
+
+	char buff[128];
+	VIP_GetClientFeatureString(client, VIP_FAKERANK, buff, sizeof(buff));
+
+	if(!buff[0])
+		return false;
+
+	return true;
+}
+
+stock int GetClientId(int client)
+{
+	char buff[128];
+	VIP_GetClientFeatureString(client, VIP_FAKERANK, buff, sizeof(buff));
+	bool isAll = (strcmp(buff, "all", false) == 0);
+	char iId[16], buff2[3];
+	hCookie.Get(client, iId, sizeof(iId));
+
+	kv.Rewind();
+	
+	if(kv.GotoFirstSubKey())
+	{
+		char exp[16][32];
+		int loop;
+
+		if(!isAll)
+			loop = ExplodeString(buff, ";", exp, sizeof(exp), sizeof(exp[]));
+
+		do
+		{
+			kv.GetSectionName(buff, sizeof(buff));
+
+			if(!isAll)
+			{
+				for(int poss = 0; poss < loop; poss++)	if(strcmp(exp[poss], buff, false) == 0)
+				{
+					kv.GetString(iId, buff2, sizeof(buff2));
+
+					if(buff2[0])
+					{
+						return StringToInt(iId);
+					}
+				}
+			}
+			else
+			{
+				kv.SavePosition();
+
+				if(kv.GotoFirstSubKey(false))
+				{
+					do
+					{
+						kv.GetString(iId, buff2, sizeof(buff2));
+
+						if(buff2[0])
+						{
+							return StringToInt(iId);
+						}
+					}
+					while(kv.GotoNextKey(false));
+
+					kv.GoBack();
+				}
+			}
+		}
+		while(kv.GotoNextKey());
+	}
+
+	kv.Rewind();
+	return kv.GetNum("DefEnabled");
 }
